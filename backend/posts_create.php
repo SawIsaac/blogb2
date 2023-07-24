@@ -1,55 +1,106 @@
-<?php
-    include "layouts/nav_sidebar.php";
+<?php 
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+session_start();
+if(isset($_SESSION['user_id'])){
+
     include "../dbconnect.php";
-    $sql = "SELECT * FROM posts";
+
+    $sql = "SELECT * FROM categories";
     $stmt = $conn->prepare($sql);
     $stmt->execute();
-    $posts = $stmt->fetchAll();
+    $categories = $stmt->fetchAll();
+
+    if ($_SERVER['REQUEST_METHOD'] == 'POST'){
+
+    $title = $_POST['title'];
+    $category_id = $_POST['category_id'];
+    $user_id = $_SESSION['user_id'];
+    $description = $_POST['description'];
+    $photo_arr = $_FILES['photo'];
+
+    // echo "$title and $category_id and $user_id and $description";
+    // print_r($photo_arr);
+
+    if(isset($photo_arr) && $photo_arr['size'] > 0){
+        $dir = 'images/';
+        $photo = $dir.$photo_arr['name']; // images/photo_name.png
+        
+        $tmp_name = $photo_arr['tmp_name'];
+        move_uploaded_file($tmp_name,$photo);
+    };
+
+
+    $sql = "INSERT INTO posts (title,category_id,user_id,photo,description) VALUES(:title, :category, :user, :photo, :description)";
+    $stmt = $conn->prepare($sql);
+    $stmt->bindParam(':title',$title);
+    $stmt->bindParam(':category',$category_id);
+    $stmt->bindParam(':user',$user_id);
+    $stmt->bindParam(':photo',$photo);
+    $stmt->bindParam(':description',$description);
+    $stmt->execute();
+
+    header("location: posts_create.php");
+    exit;
+
+}else {
+
+    include "layouts/nav_sidebar.php";
+
 ?>
-    
-<style>
-    .post-form{
-        width: 100%;
-        padding: 25px;
-        border: 1px solid rgba(0,0,0,0.1);
-        margin: 0 auto;
-    }
-</style>
 
-<div class="container">
-    <div class="post-form">
-        <div>
-            <h1 class="d-inline-block">Post create</h1>
-            <button class="btn btn-danger float-end">Cancel</button>
-        </div>
-        <div class="mb-3">
-            <label for="exampleFormControlInput1" class="form-label">Title</label>
-            <input type="text" class="form-control" id="exampleFormControlInput1" >
-        </div>
-        <div class="mb-3">
-            <label for="formFile" class="form-label">Default file input example</label>
-            <input class="form-control" type="file" id="formFile">
-        </div>
-        <div class="mb-3">
-        <label for="exampleFormControlInput1" class="form-label">Categories</label>
-            <select class="form-select" aria-label="Default select example">
-                <option selected>Select category</option>
-                <option value="1">One</option>
-                <option value="2">Two</option>
-                <option value="3">Three</option>
-            </select>
-        </div>
-        <div class="mb-3">
-            <label for="exampleFormControlTextarea1" class="form-label">Description</label>
-            <textarea class="form-control" id="exampleFormControlTextarea1" rows="3"></textarea>
-        </div>
-        <button class="btn btn-primary w-100 mt-3 text-center">
-            POST
-        </button>
-    </div>
-    
-</div>
+    <main>
+        <div class=" container-fluid px-3">
+            <div class="card my-5">
+                <div class="card-header">
+                    <p class="d-inline">Post Create</p>
+                    <a href="posts.php" class="btn btn-sm btn-danger float-end">Cancel</a>
+                </div>
+                <div class="card-body">
+                    <form action="<?php htmlspecialchars($_SERVER['PHP_SELF']) ?>" method="post" enctype="multipart/form-data">
+                        <div class="mb-3">
+                            <label for="title" class="form-label">Title</label>
+                            <input type="text" class="form-control" id="title" name="title">
+                        </div>
+                        <div class="mb-3">
+                            <label for="photo" class="form-label">Photo</label>
+                            <input type="file" class="form-control" id="photo" name="photo">
+                        </div>
+                        <div class="mb-3">
+                            <label for="category_id">Category</label>
+                            <select class="form-select" name="category_id" id="category_id">
+                                <option selected>Select Category</option>
+                                <?php 
+                                    foreach ($categories as $category) { 
+                                ?>
+                                    <option value="<?= $category['id'] ?>"><?= $category['name'] ?></option>
 
-<?php
+                                <?php 
+                                    }
+                                ?>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Description</label>
+                            <textarea name="description" id="description" class="form-control"></textarea>
+                        </div>
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-primary" type="submit">Submit</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </main>
+
+<?php 
+
     include "layouts/footer.php";
+
+}
+}else{
+    header("location:login.php");
+}
+
 ?>
